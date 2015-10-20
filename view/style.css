@@ -1,0 +1,25 @@
+// монитор кеша Redis
+.uf-err { background-color: rgba(255, 0, 0, .2); }
+.uf-info { background-color: rgba(0, 255, 0, .2); }
+.uf-warn { background-color: rgba(255, 255, 0, .4); }
+
+fieldset.rc-options{
+    border: 1px solid #dfb873;
+    margin: 10px 10px 10px 0;
+    padding: 5px 10px;
+    float:left;
+    height: 105px;
+}
+table#rc-list-head, table#rc-list-body {
+    display: block;
+    float: left;
+}
+table#rc-list-head {padding-bottom: 5px;}
+.cache-info {
+    border: 1px solid #dfb873;
+    padding: 10px;
+    overflow: auto;
+    width: 850px;
+}
+table#rc-list-body, #rc-update, #ch-del-mask { cursor: pointer; }
+.ch-info { cursor: default; }
