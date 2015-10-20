@@ -78,7 +78,7 @@
         </tr>
         <tr>
             <td id='rc-update'>↺</td>
-            <td><input id='flt-ttl' type='text' size=4 value='>119'></td>
+            <td><input id='flt-ttl' type='text' size=4></td>
             <td><input id='flt-key' type='text' size=20><span id='ch-del-mask'>[ x ]</span></td>
             <td id='flt-info'></td>
         </tr>
