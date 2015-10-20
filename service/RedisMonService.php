@@ -12,7 +12,7 @@ class RedisMonService extends CComponent
     {
         //буква, цифра или _ : - . *
         $ptrn = (isset($_GET['key']) && preg_match('~^[\w\-:.*]+$~', $_GET['key'])) ? $_GET['key'] : '*';
-        $keys = Yii::app()->rmon->scan($ptrn);
+        $keys = Yii::app()->redis->scan($ptrn);
         self::_clearKeys($keys);
         $ttls = self::ttls($keys);
         sort($keys);
@@ -61,7 +61,7 @@ class RedisMonService extends CComponent
 
         $ttls = array();
         foreach ($keys as $k => $v) {
-            $t = (int)Yii::app()->rmon->execute(['TTL', $v]);
+            $t = (int)Yii::app()->redis->execute(['TTL', $v]);
             $takeIt = true;
             switch ($case) {
                 case'':break; //так быстрее. Не будет проверки всех условий, когда фильтра нет.
@@ -100,7 +100,7 @@ class RedisMonService extends CComponent
         }
 
         $key = $_GET['key'];
-        $type = Yii::app()->rmon->execute(['TYPE', $key]);
+        $type = Yii::app()->redis->execute(['TYPE', $key]);
 
         switch ($type) {
             case 'none':
@@ -120,7 +120,7 @@ class RedisMonService extends CComponent
         $result = $result !== false
         ? [
             'type' => $type,
-            'ttl' => Yii::app()->rmon->execute(['TTL', $key]),
+            'ttl' => Yii::app()->redis->execute(['TTL', $key]),
             'data' => empty($result) ? '&lt;пусто&gt;' : $result,
         ]
         : [
@@ -139,10 +139,10 @@ class RedisMonService extends CComponent
      */
     private static function _getString($key)
     {
-        if ((!$result = Yii::app()->rmon->execute(['GET', $key])) || isset($_GET['raw'])) {
+        if ((!$result = Yii::app()->redis->execute(['GET', $key])) || isset($_GET['raw'])) {
             return $result;
         }
-        return var_export(Yii::app()->rmon->fullInfo($result), true);
+        return var_export(Yii::app()->redis->fullInfo($result), true);
     }
 
     /**
@@ -153,12 +153,12 @@ class RedisMonService extends CComponent
     private static function _getHash($key)
     {
         if (isset($_GET['raw'])) {
-            if (!$result = Yii::app()->rmon->execute(['HGETALL', $key])) {
+            if (!$result = Yii::app()->redis->execute(['HGETALL', $key])) {
                 return false;
             }
         } else {
-            $fields = Yii::app()->rmon->execute(['HKEYS', $key]);
-            $values = Yii::app()->rmon->execute(['HVALS', $key]);
+            $fields = Yii::app()->redis->execute(['HKEYS', $key]);
+            $values = Yii::app()->redis->execute(['HVALS', $key]);
 
             if (!$fields || !$values) {
                return false;
@@ -183,7 +183,7 @@ class RedisMonService extends CComponent
             }
 
             //Если время обновится, ответим новым значением. Иначе - тем, что сказал кешер.
-            $result = Yii::app()->rmon->execute(['EXPIRE', (string)$_POST['key'], $ttl]);
+            $result = Yii::app()->redis->execute(['EXPIRE', (string)$_POST['key'], $ttl]);
             $result = ($result === '1') ? $ttl : 'Ответ Redis: ' . $result;
         } else {
             $result = 'нет нужного параметра';
@@ -203,7 +203,7 @@ class RedisMonService extends CComponent
             if($key === '*') {
                 return 'Недопустимая маска. Нельзя удалить весь кеш.';
             }
-            $result = Yii::app()->rmon->delete($key);
+            $result = Yii::app()->redis->delete($key);
             if (!is_numeric($result)) {
                 $result = 'Ответ Redis: ' . $result;
             }
@@ -211,5 +211,39 @@ class RedisMonService extends CComponent
             $result = 'нет нужного параметра';
         }
         return $result;
+    }
+
+    /**
+     * Переключение кешера. Открываем config/main.php и прописываем настройку 'off' => true|false.
+     * По умолчанию доступ к файлу ограничен, 664. Поскольку обновление main.php происходит редко,
+     * можно вручную менять права. Будет сложно, буду искать решение.
+     *
+     * @param bool $on включить кешер?
+     * @return int|string 1 - успешно, 0 - неудача ИЛИ сообщение об ошибке
+     */
+    public static function switcher($on)
+    {
+        if (!$file = realpath(__DIR__ . '/../../config/main.php')) {
+            return 'Не нашел файл конфига';
+        } elseif (!is_writable($file)) {
+            return 'Не могу писать в конфиг';
+        }
+
+        if (($conf = file_get_contents($file)) === false) {
+            return 'Ошибка чтения файла конфига';
+        }
+
+        $search = $on ? 'true' : 'false';
+        $replace = $on ? 'false' : 'true';
+        $conf = str_replace("'off' => {$search},", "'off' => {$replace},", $conf);
+        if (strpos($conf, "'off' => {$replace},") === false) {
+            return 'Не удалось переписать значение';
+        }
+
+        if (file_put_contents($file, $conf) === false) {
+            return 'Ошибка записи файла конфига';
+        }
+
+        return 1;
     }
 }

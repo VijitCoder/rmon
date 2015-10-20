@@ -15,11 +15,11 @@ return array(
     ...
     'components'=>array(
         ...
-        'rmon' => array(
+        'redis' => array(
             'class' => 'RedisSocWrapper',
             'off' => false,                   //не отключать использование redis-кеша
             'strict' => !Env::isProduction(), //на проде не прерывать скрипт, если ошибки с Redis
-            'log_level' => 2,                 //0 - отключить логирование, 4 - максимум инфы. Рекомендуемый: 1-2
+           // 'log_level' => 2,                 //0 - отключить логирование, 4 - максимум инфы. Рекомендуемый: 1-2
         ),
     ),
 );

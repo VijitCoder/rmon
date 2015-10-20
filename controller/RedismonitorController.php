@@ -14,7 +14,8 @@ class RedismonitorController extends СController
     protected function beforeAction($action)
     {
         //Контроль доступа. После переноса функционала в админку это можно удалить.
-        if (!in_array(strtolower(Yii::app()->user->name), ['vijit', 'debuger'])) {
+        //А еще можно повешать фильтр accessControl, а не такую проверку. Но суть не изменится.
+        if (!in_array(strtolower(Yii::app()->user->name), ['vijit', 'admin'])) {
             throw new CHttpException(403);
         }
 
@@ -90,5 +91,23 @@ class RedismonitorController extends СController
     public function actionDelete()
     {
         echo RedisMonService::delete();
+    }
+
+    /**
+     * Управление кешером: вкл/выкл, сброс базы. Эти действия запрещены на production.
+     * (ajax)GET
+     * @return string '1' - успешно, иначе - сообщение об ошибке
+     */
+    public function actionControl($op)
+    {
+        if (!in_array($op, ['flush', 'off', 'on'])) {
+            return;
+        }
+
+        if ($op == 'flush') {
+            echo (int)Yii::app()->redis->execute(['FLUSHDB']);
+        } else {
+            echo RedisMonService::switcher($op == 'on');
+        }
     }
 }
